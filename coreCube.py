@@ -8,7 +8,7 @@ import sys
 import math
 
 class CoreCube(bluepy.btle.Peripheral):
-
+  
   def __init__(self):
     bluepy.btle.Peripheral.__init__(self)
     self.x = 0
@@ -123,6 +123,12 @@ class CoreCube(bluepy.btle.Peripheral):
       version = ''
     return version
 
+  #  ---------------- Magnetic Sensor Information
+  def magnetic(self, mode, interval):
+    # Notify にて、intervalで指定した間隔で返ってくる
+    data = "1b00{:02x}{:02x}01".format(mode, interval)
+    self.writeCharacteristic(self.HANDLE_TOIO_CFG, binascii.a2b_hex(data))
+
   # ----------------- Utility
 
   # いちばん近いcoreCube のアドレスを返す。ただし、root で実行する必要がある。
@@ -223,3 +229,54 @@ class CoreCube(bluepy.btle.Peripheral):
       time.sleep(0.03)
 
     self.motor( (0, 0), 0 )
+  
+  def setNotify(self, handle, flag):
+    if flag:
+      self.writeCharacteristic(handle + 1, b'\x01\x00', True)
+    else:
+      self.writeCharacteristic(handle + 1, b'\x00\x00', True)
+
+
+class toioDefaultDelegate(bluepy.btle.DefaultDelegate):
+    def __init__(self, params, ptoio):             # コンストラクタで対応するtoioを指定する
+        bluepy.btle.DefaultDelegate.__init__(self)
+        self.ctoio = ptoio
+
+    # notify callback: cHandle で何のNotifyかを見分けて処理分岐
+    def handleNotification(self, cHandle, data):
+        # ------------- ボタン
+        if cHandle == self.ctoio.HANDLE_TOIO_BTN:
+          id, stat = struct.unpack('BB', data[0:2])
+          self.notify_button(id, stat)
+
+        # ------------- モーションセンサー
+        if cHandle == self.ctoio.HANDLE_TOIO_SEN:
+          id = struct.unpack('b', data[0:1])[0]
+          if id == 0x01:
+            id, horizon, tap, dbltap = struct.unpack('BBBB', data[0:4])
+            self.notify_motion(id, horizon, tap, dbltap)
+          if id == 0x02:
+            id, status, power, x, y, z = struct.unpack('bbbBBB', data[0:6])
+            self.notify_magnetic(id, status, power, x, y, z)
+
+        # ------------- IDセンサー
+        if cHandle == self.ctoio.HANDLE_TOIO_ID:
+          id = struct.unpack('b', data[0:1])[0]
+          if id == 0x01:
+            x, y, dir = struct.unpack('hhh', data[1:7])
+            self.notify_XY(x, y, dir)
+          elif id == 0x02:
+            stdid = struct.unpack('i', data[1:5])[0]
+            dir = struct.unpack('h', data[5:7])[0]
+            self.notify_ID(stdid, dir)
+
+    def notify_button(self, id, stat):
+      pass
+    def notify_motion(self, id, horizon, tap, dbltap):
+      pass
+    def notify_XY(self, x, y, dir):
+      pass
+    def notify_ID(self, stdid, dir):
+      pass
+    def notify_magnetic(self, id, status, power, x, y, z):
+      pass

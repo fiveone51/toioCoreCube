@@ -12,18 +12,18 @@ class MyDelegate(bluepy.btle.DefaultDelegate):
     # notify callback: cHandle で何のNotifyかを見分けて処理分岐
     def handleNotification(self, cHandle, data):
         # ------------- ボタン
-        if cHandle == CoreCube.HANDLE_TOIO_BTN:
+        if cHandle == toio.HANDLE_TOIO_BTN:
           id, stat = struct.unpack('BB', data[0:2])
           if stat == 0x80:
             self.ctoio.soundId(2)
         # ------------- モーションセンサー
-        if cHandle == CoreCube.HANDLE_TOIO_SEN:
+        if cHandle == toio.HANDLE_TOIO_SEN:
           id, horizon, collision = struct.unpack('BBB', data[0:3])
           print("SENSOR:   HORIZON={:02x}, COLLISION={:02x}".format(horizon, collision))
           if collision:
             self.ctoio.soundId(6)
         # ------------- IDセンサー
-        if cHandle == CoreCube.HANDLE_TOIO_ID:
+        if cHandle == toio.HANDLE_TOIO_ID:
           id = struct.unpack('b', data[0:1])[0]
           if id == 0x01:
             x, y, dir = struct.unpack('hhh', data[1:7])
@@ -52,9 +52,9 @@ if __name__ == "__main__":
   toio.withDelegate(MyDelegate(bluepy.btle.DefaultDelegate, toio))
 
   # --- Notifyを要求
-  toio.writeCharacteristic(CoreCube.HANDLE_TOIO_ID  + 1, b'\x01\x00', True)
-  toio.writeCharacteristic(CoreCube.HANDLE_TOIO_SEN + 1, b'\x01\x00', True)
-  toio.writeCharacteristic(CoreCube.HANDLE_TOIO_BTN + 1, b'\x01\x00', True)
+  toio.writeCharacteristic(toio.HANDLE_TOIO_ID  + 1, b'\x01\x00', True)
+  toio.writeCharacteristic(toio.HANDLE_TOIO_SEN + 1, b'\x01\x00', True)
+  toio.writeCharacteristic(toio.HANDLE_TOIO_BTN + 1, b'\x01\x00', True)
 
   # --- Notify待ち関数を実行させる。 10秒Notifyがなければ終了
   while True:
