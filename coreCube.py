@@ -8,20 +8,6 @@ import sys
 import math
 
 class CoreCube(bluepy.btle.Peripheral):
-  #
-  # BLEのバージョンによって、GATT Handle が変わってしまった！！
-  # バージョンを取り出すコマンド自体のGATT Handle も変わっているので、
-  # おかしな値が返ってきてしまう。苦肉の対応を取る   2020/01/17
-  BLE_VERSION = 0
-  BLE_VERSION_TEXT = ['2.0.0', '2.1.0']
-  HANDLE_TOIO_ID  = [0x0d, 0x0d]
-  HANDLE_TOIO_MTR = [0x11, 0x11]
-  HANDLE_TOIO_LED = [0x14, 0x15]
-  HANDLE_TOIO_SND = [0x17, 0x18]
-  HANDLE_TOIO_SEN = [0x1a, 0x1b]
-  HANDLE_TOIO_BTN = [0x1e, 0x1f]
-  HANDLE_TOIO_BAT = [0x22, 0x23]
-  HANDLE_TOIO_CFG = [0x26, 0x27]       # このHandleをReadして、BLE_VERSION_TEXTと一致したバージョンがBLE VERSIONとする
 
   def __init__(self):
     bluepy.btle.Peripheral.__init__(self)
@@ -35,11 +21,29 @@ class CoreCube(bluepy.btle.Peripheral):
   #  ---------------- connect
   def connect(self, deviceAddr, addrType=bluepy.btle.ADDR_TYPE_RANDOM):
     bluepy.btle.Peripheral.connect(self, deviceAddr, addrType)
-    self.bleVersion()
+    # UUIDからHANDLEを求める
+    charas = bluepy.btle.Peripheral.getCharacteristics(self)
+    for chara in charas:
+      if chara.uuid.binVal.hex() == "10b201015b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_ID = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201025b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_MTR = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201035b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_LED = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201045b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_SND = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201065b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_SEN = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201075b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_BTN = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201085b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_BAT = chara.getHandle()
+      elif chara.uuid.binVal.hex() == "10b201ff5b3b45719508cf3efcd7bbae":
+        self.HANDLE_TOIO_CFG = chara.getHandle()
 
   #  ---------------- ID Information
   def id(self):
-    data = self.readCharacteristic(self.HANDLE_TOIO_ID[self.BLE_VERSION])
+    data = self.readCharacteristic(self.HANDLE_TOIO_ID)
     id = struct.unpack('b', data[0:1])[0]
     if id == 0x01:
       self.x, self.y, self.dir = struct.unpack('hhh', data[1:7])
@@ -50,7 +54,7 @@ class CoreCube(bluepy.btle.Peripheral):
 
   #  ---------------- Sensor Information
   def sensor(self):
-    data = self.readCharacteristic(self.HANDLE_TOIO_SEN[self.BLE_VERSION])
+    data = self.readCharacteristic(self.HANDLE_TOIO_SEN)
     id = struct.unpack('b', data[0:1])[0]
     if id == 0x01:
       self.horizon = struct.unpack('b', data[1:2])[0]
@@ -59,7 +63,7 @@ class CoreCube(bluepy.btle.Peripheral):
 
   #  ---------------- Battery Information
   def battery(self):
-    data = self.readCharacteristic(self.HANDLE_TOIO_BAT[self.BLE_VERSION])
+    data = self.readCharacteristic(self.HANDLE_TOIO_BAT)
     return struct.unpack('b', data)[0]
 
   #  ---------------- Motor Control
@@ -69,58 +73,54 @@ class CoreCube(bluepy.btle.Peripheral):
     data = data + "02" + ("01" if speeds[1] >= 0 else "02") + ("{:02x}".format(abs(speeds[1])))
     if duration != 0:
       data = data + ("{:02x}".format(duration))
-    self.writeCharacteristic(self.HANDLE_TOIO_MTR[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_MTR, binascii.a2b_hex(data))
 
   #  ---------------- Light Control
   def lightOn(self, color, duration):
     data = "03{:02x}0101{:02x}{:02x}{:02x}".format(duration, color[0], color[1], color[2])
-    self.writeCharacteristic(self.HANDLE_TOIO_LED[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
 
   def lightSequence(self, times, operations):    # operations = ( (duration,(r,g,b)), (d,(r,g,b)), ... )
     data = "04{:02x}".format(times)
     data = data + "{:02x}".format(len(operations))
     for ope in operations:
       data = data + "{:02x}0101{:02x}{:02x}{:02x}".format(ope[0], ope[1][0], ope[1][1], ope[1][2])
-    self.writeCharacteristic(self.HANDLE_TOIO_LED[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
 
   def lightOff(self):
     data = "01"
-    self.writeCharacteristic(self.HANDLE_TOIO_LED[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
 
   #  ---------------- Sound Control
   def soundId(self, id):
     data = "02{:02x}FF".format(id)
-    self.writeCharacteristic(self.HANDLE_TOIO_SND[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
 
   def soundSequence(self, times, operations):     # operations = ( (duration,note), (d,n), ... )
     data = "03{:02x}".format(times)
     data = data + "{:02x}".format(len(operations))
     for ope in operations:
       data = data + "{:02x}{:02x}FF".format(ope[0], ope[1])
-    self.writeCharacteristic(self.HANDLE_TOIO_SND[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
 
   def soundMono(self, duration, note):
     data = "030101{:02x}{:02x}FF".format(duration, note)
-    self.writeCharacteristic(self.HANDLE_TOIO_SND[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
 
   def soundStop(self):
     data = "01"
-    self.writeCharacteristic(self.HANDLE_TOIO_SND[self.BLE_VERSION], binascii.a2b_hex(data))
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
 
   #  ---------------- Configuration  ( BLE Version )
   def bleVersion(self):
-    for i in range(len(self.BLE_VERSION_TEXT)):
-      data = "0100"
-      self.writeCharacteristic(self.HANDLE_TOIO_CFG[i], binascii.a2b_hex(data))
-      time.sleep(0.1)
-      data = self.readCharacteristic(self.HANDLE_TOIO_CFG[i])
-      try:
-        version = codecs.decode(data[2:8], encoding='utf-8')
-      except:
-        version = ''
-      if version == self.BLE_VERSION_TEXT[i]:
-        self.BLE_VERSION = i
-        break
+    data = "0100"
+    self.writeCharacteristic(self.HANDLE_TOIO_CFG, binascii.a2b_hex(data))
+    time.sleep(0.1)
+    data = self.readCharacteristic(self.HANDLE_TOIO_CFG)
+    try:
+      version = codecs.decode(data[2:8], encoding='utf-8')
+    except:
+      version = ''
     return version
 
   # ----------------- Utility
@@ -223,4 +223,3 @@ class CoreCube(bluepy.btle.Peripheral):
       time.sleep(0.03)
 
     self.motor( (0, 0), 0 )
-
