@@ -1,12 +1,14 @@
 # Raspberry pi にて、bluepy を使って、toio コアキューブを動かすサンプル(python3)
 
+## raspberry pi 以外（Intel Linux）でも動作してます。というか、最近は Intel Linux で確認しています
+
 事前に、raspberry pi に bluepyをインストールする必要あり。
 
 ````
 $ sudo apt install libbluetooth3-dev libglib2.0 libboost-python-dev libboost-thread-dev
 $ sudo apt install python3-pip
-$ cd /usr/lib/arm-linux-gnueabihf/
-$ sudo ln libboost_python-py35.so libboost_python-py34.so
+$ cd /usr/lib/arm-linux-gnueabihf/　　　　　　　　　　　　　　　　　←　raspi のみ。Intel Linuxでは不要
+$ sudo ln libboost_python-py35.so libboost_python-py34.so　　　　 ←　raspi のみ。Intel Linuxでは不要
 $ sudo pip3 install gattlib
 $ sudo pip3 install bluepy
 $ sudo systemctl daemon-reload
@@ -20,9 +22,8 @@ $ sudo service bluetooth restart
   https://toio.io/update/
 
 >  この新しいアップデートでは、GATT Handle が変更されています。利用するBLEのライブラリによっては気にする必要はないのですが、bluepy はもろに影響を受けます。ということで、BLE Version を取り出して、Handle をダイナミックに変更するように修正しました。
-> （BLE Version を取り出すコマンドのHandleも変更されてので、エラーの発生を判断基準にしていて、ちょっと場当たり的な対応ですが…）
 
-> また、モーターコントロールにいろいろな機能が追加されています。いろいろありすぎて、どのように対応するべきか、ちょっと考えてから、coreCubeクラスを修正しようかなぁと思っていますので、少々お待ちください。
+> また、モーターコントロールにいろいろな機能が追加されています。いろいろありすぎて、どのように対応するべきか、ちょっと考えてから、coreCubeクラスを修正しようかなぁと思っていますので、少々お待ちください。（磁気センサーなども使えるようになっています）
 
 
 その他、以下に簡単な説明あり。
