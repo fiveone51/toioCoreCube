@@ -1,37 +1,28 @@
 from coreCube import CoreCube
+from coreCube import toioDefaultDelegate
 import time
 import bluepy
 import sys
 import struct
 
-class MyDelegate(bluepy.btle.DefaultDelegate):
-    def __init__(self, params, ptoio):             # コンストラクタで対応するtoioを指定する
-        bluepy.btle.DefaultDelegate.__init__(self)
-        self.ctoio = ptoio
+class MyDelegate(toioDefaultDelegate):
+    # HANDLE_TOIO_BTN
+    def notify_button(self, id, stat):
+      if stat == 0x80:    # ボタンが押されたら音を出す
+        self.ctoio.soundId(2)
 
-    # notify callback: cHandle で何のNotifyかを見分けて処理分岐
-    def handleNotification(self, cHandle, data):
-        # ------------- ボタン
-        if cHandle == toio.HANDLE_TOIO_BTN:
-          id, stat = struct.unpack('BB', data[0:2])
-          if stat == 0x80:
-            self.ctoio.soundId(2)
-        # ------------- モーションセンサー
-        if cHandle == toio.HANDLE_TOIO_SEN:
-          id, horizon, collision = struct.unpack('BBB', data[0:3])
-          print("SENSOR:   HORIZON={:02x}, COLLISION={:02x}".format(horizon, collision))
-          if collision:
-            self.ctoio.soundId(6)
-        # ------------- IDセンサー
-        if cHandle == toio.HANDLE_TOIO_ID:
-          id = struct.unpack('b', data[0:1])[0]
-          if id == 0x01:
-            x, y, dir = struct.unpack('hhh', data[1:7])
-            print("X,Y,dir = (%d,%d), %d" % (x,y,dir))
-          elif id == 0x02:
-            stdid = struct.unpack('i', data[1:5])[0]
-            dir = struct.unpack('h', data[5:7])[0]
-            print("ID = %d,  dir = %d" % (stdid,dir))
+    # HANDLE_TOIO_SEN
+    def notify_motion(self, id, horizon, tap, dbltap):
+      print("MOTION SENSOR:   HORIZON={:02x}, TAP={:02x}, DblTAP={:02x}".format(horizon, tap, dbltap))
+      if dbltap == 1:     # ダブルタップされたら音を出す 
+        self.ctoio.soundId(6)
+    
+    # HANDLE_TOIO_ID
+    def notify_XY(self, x, y, dir):
+      print("X,Y,dir = (%d,%d), %d" % (x,y,dir))　　　# マットの座標、角度を表示する
+
+    def notify_ID(self, stdid, dir):
+      print("ID = %d,  dir = %d" % (stdid,dir))
 
 if __name__ == "__main__":
 
@@ -52,9 +43,9 @@ if __name__ == "__main__":
   toio.withDelegate(MyDelegate(bluepy.btle.DefaultDelegate, toio))
 
   # --- Notifyを要求
-  toio.writeCharacteristic(toio.HANDLE_TOIO_ID  + 1, b'\x01\x00', True)
-  toio.writeCharacteristic(toio.HANDLE_TOIO_SEN + 1, b'\x01\x00', True)
-  toio.writeCharacteristic(toio.HANDLE_TOIO_BTN + 1, b'\x01\x00', True)
+  toio.setNotify(toio.HANDLE_TOIO_ID, True)   # ID情報
+  toio.setNotify(toio.HANDLE_TOIO_SEN, True)　# センサー情報
+  toio.setNotify(toio.HANDLE_TOIO_BTN, True)  # ボタン情報
 
   # --- Notify待ち関数を実行させる。 10秒Notifyがなければ終了
   while True:
