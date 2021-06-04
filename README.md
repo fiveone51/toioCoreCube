@@ -1,42 +1,70 @@
-# Raspberry pi にて、bluepy を使って、toio コアキューブを動かすサンプル(python3)
+# Linux にて、bluepy を使って、toio コアキューブを動かす
 
-## raspberry pi 以外（Intel Linux）でも動作してます。というか、最近は Intel Linux で確認しています
+-----
+# 目次
 
-事前に、raspberry pi に bluepyをインストールする必要あり。
+* [coreCubeクラスの概要](#coreCubeクラスの概要)
+* [接続関連](#接続関連)
+* [センサー関連](#センサー関連)
+* [モーター関連](#モーター関連)
+* [ランプ関連](#ランプ関連)
+* [サウンド関連](#サウンド関連)
+* [その他](#その他)
 
-````
-$ sudo apt install libbluetooth3-dev libglib2.0 libboost-python-dev libboost-thread-dev
-$ sudo apt install python3-pip
-$ cd /usr/lib/arm-linux-gnueabihf/　　　　　　　　　　　　　　　　　←　raspi のみ。Intel Linuxでは不要
-$ sudo ln libboost_python-py35.so libboost_python-py34.so　　　　 ←　raspi のみ。Intel Linuxでは不要
-$ sudo pip3 install gattlib
-$ sudo pip3 install bluepy
-$ sudo systemctl daemon-reload
-$ sudo service bluetooth restart
-````
-> 3,4行目は、buster から不要になったみたいです。
+<br>
 
-### CoreCube バージョンアップ対応
-> toio CoreCube のfirmware がアップデートされ、機能追加と安定性向上が図られました。（2020年1月前後）
+* [Notifyの活用](#Notifyの活用)
+  * Notifyとは？
+  * Notify用のメソッドの定義方法
+  * Notifyが使えるメソッド
 
-  https://toio.io/update/
-
->  この新しいアップデートでは、GATT Handle が変更されています。利用するBLEのライブラリによっては気にする必要はないのですが、bluepy はもろに影響を受けます。ということで、BLE Version を取り出して、Handle をダイナミックに変更するように修正しました。
-
-> また、モーターコントロールにいろいろな機能が追加されています。いろいろありすぎて、どのように対応するべきか、ちょっと考えてから、coreCubeクラスを修正しようかなぁと思っていますので、少々お待ちください。（磁気センサーなども使えるようになっています）
-
-
-その他、以下に簡単な説明あり。
-
-[Raspberry Pi で toio コアキューブをコントロールする](https://qiita.com/FiveOne/items/505f369d1f77fa846a8b)
+<br>
 
 -----
 
-# coreCube クラス の概要
+ここで紹介している coreCube クラスは、SIE製 toio のコアキューブを Bluetooth のコマンドを使って操作するものです。エラー処理などは、省いているのでご了承ください。基本的には、Pythonと、bluepy という Pythonモジュールが動作すれば動くと思います。
+
+
+### 動作確認したLinux
+
+* Raspberry Pi 3  (rasbian)
+* Raspberry Pi 4  (ubuntu)
+* Intel Linux (Debian buster)
+
+### bluepy のインストール
+
+````
+★必要なパッケージのインストール
+$ sudo apt install libbluetooth3-dev libglib2.0 libboost-python-dev libboost-thread-dev
+
+★Raspberry Pi (rasbian Bustrer以前) では、バージョン不整合があるようなので以下の操作をする
+$ cd /usr/lib/arm-linux-gnueabihf/
+$ sudo ln libboost_python-py35.so libboost_python-py34.so
+
+★bluepy のインストール
+$ sudo pip3 install gattlib
+$ sudo pip3 install bluepy
+
+★bluetooth サービスがインストールされていなければインストールする
+$ sudo apt install bluetooth
+$ sudo systemctl enable bluetooth
+$ sudo restart
+````
+
+### CoreCube バージョンアップ対応
+> toio CoreCube のfirmware は不定期にアップデートされ、機能追加と安定性向上が図られています。
+  https://toio.io/update/
+
+> いろいろな機能がありすぎて、このクラスはすべてに対応しているわけではありません。なるべく有用な機能に対応していこうと思います。
+
+<br><br>
+
+-----
+# coreCubeクラスの概要
 
 toio コアキューブを操作するための各種機能をまとめたクラス。以下の例のような感じで使います。
 
-````py
+````py 
 import time
 from coreCube import CoreCube
 
@@ -58,13 +86,13 @@ else:
 $ sudo python3 sample.py                            # 一番近くのコアキューブに自動接続
 ````
 
+-----
 # 接続関連
 
-## cubeSearch()
+## cubeSearch　メソッド
 > 電源の入っているコアキューブを探して、見つかったコアキューブのアドレスを配列で返す。
 > コアキューブの存在しなければ、空の配列をかえす。<p>
 > 配列は、RSSIの強さでソートされる（つまり、近くにあるコアキューブから順）。<p>
-
 > **★ クラスメソッドなので、インスタンスを作成しなくても実行できる。<p>
 > ★ rootで実行する必要がある**
 
@@ -91,6 +119,7 @@ $ sudo python3 sample.py                            # 一番近くのコアキ�
     toio2 = coreCube()
     toio2.connect(toio_addr[1])
 ````
+<br>
 
 ## connect メソッド
 
@@ -116,6 +145,7 @@ $ sudo python3 sample.py                            # 一番近くのコアキ�
     sys.exit()
 ````
 
+-----
 # センサー関連
 
 ## id メソッド
@@ -137,7 +167,7 @@ $ sudo python3 sample.py                            # 一番近くのコアキ�
 
 ````py
 toio = CoreCube()
-toio.connect(TOIO_ADDR)
+toio.connect("xx:xx:xx:xx:xx:xx")  # 実際のアドレスを指定
 
 id = toio.id()
 if id == 1:
@@ -149,7 +179,9 @@ else:
 ````
 
 #### 補足
->本来、読み取りセンサー情報は、notify で読み込むべきなので、このメソッドを使う必要はない。しかし、現時点で、このクラスは非同期対応していないため、うまくnotify を受け取ることができていない。そのための苦肉の策となっている。
+>読み取りセンサー情報は、このモジュールを使って、直接READする方法と、Notifyで受け取る方法がある。Notify については、後述。
+
+<br>
 
 #### id関連のオブジェクト
 
@@ -159,6 +191,7 @@ else:
 |**y**|int|id()メソッドで読み込んだ Y座標|
 |**dir**|int|id()メソッドで読み込んだ 角度|
 |**stdid**|int|id()メソッドで読み込んだ Standard ID|
+<br>
 
 ## sensor メソッド
 
@@ -182,13 +215,18 @@ if toio.horizon == 0:
 ````
 
 #### 補足
->こちらも readメソッドで読み込んでいる。ホントは collision という衝突検知の値も取り出せるが、readメソッドでは常に「衝突していない」の値しか返ってこないので、ここでは取り上げない
+>衝突検知の値も取り出せるが、readメソッドでは常に「衝突していない」の値しか返ってこないので、ここでは取り上げない。衝突件については、Notifyのところで後述する。
 
+<br>
 #### sensor関連のオブジェクト
 
 |項目|型|詳細|
 |:---|:--|:--|
 |**horizon**|int|sensor()メソッドで読み込んだ 水平検出値<p>**00**: 水平ではないとき<p>**01**: 水平な時|
+
+<br>
+
+-----
 
 # モーター関連
 
@@ -221,9 +259,12 @@ time.sleep(1)
 #### 補足
 >mortor()で、durationを指定しても、指定した時間分待たずに返ってくるため、必要であれば、上記の例のように、呼び出した側で待ち時間を入れる必要がある。
 
+<br>
+
 ## moveTo メソッド
 
-> トイオコレクションのマットの上に置かれたコアキューブを指定された座標まで動かす。
+> トイオコレクションのマットの上に置かれたコアキューブを指定された座標まで動かす。<br>**※コアキューブのファームウェアアップデートで、本体側に同様の機能が追加された。そちらの方が精度が高いと思うので、そのうち置き換えます**
+
 
 #### 詳細
 |項目|詳細|
@@ -249,7 +290,9 @@ toio.soundId(1)
 >停止位置は、指定された位置と多少誤差が発生する。<p>
 >停止する直前に、コアキューブの速度が遅くなる。
 
+<br>
 
+-----
 # ランプ関連
 
 ## lightOn メソッド
@@ -282,6 +325,8 @@ toio.lightOff()
 
 >lightOn()で、durationを指定しても、指定した時間分待たずに返ってくるため、必要であれば、上記の例のように、呼び出した側で待ち時間を入れる必要がある。
 
+<br>
+
 ## lightOff メソッド
 
 [toio 技術仕様 ランプ](https://toio.github.io/toio-spec/docs/ble_light)
@@ -305,6 +350,7 @@ for i in range(256):
   time.sleep(0.01)
 toio.lightOff()  
 ````
+<br>
 
 ## lightSequence メソッド
 
@@ -337,6 +383,9 @@ toio.lightOff()
 
 >BLEでは、１度に送れるデータ量に制限がある。bluepyでは、デフォルト値が小さいため、2 operation しか送ることができない。（MTUの変更ができるハズだが、うまくいかない）
 
+<br>
+
+-----
 # サウンド関連
 
 ## soundID メソッド
@@ -363,6 +412,8 @@ time.sleep(0.5)
 #### 補足
 
 >soundID()は、サウンドの終了を待たずに処理が戻る。
+
+<br>
 
 ## soundMono メソッド
 
@@ -393,6 +444,8 @@ time.sleep(0.5)
 #### 補足
 
 >soundMono()で、durationを指定しても、指定した時間分待たずに返ってくるため、必要であれば、上記の例のように、呼び出した側で待ち時間を入れる必要がある。
+
+<br>
 
 ## soundSequence メソッド
 
@@ -426,6 +479,8 @@ toio.soundStop()
 
 >BLEでは、１度に送れるデータ量に制限がある。bluepyでは、デフォルト値が小さいため、4 operation しか送ることができない。（MTUの変更ができるハズだが、うまくいかない）
 
+<br>
+
 ## soundStop メソッド
 
 [toio 技術仕様 サウンド](https://toio.github.io/toio-spec/docs/ble_sound)
@@ -447,6 +502,7 @@ toio.soundID(1)   # selected再生音
 time.sleep(0.5)
 ````
 
+-----
 # その他
 
 ## battery メソッド
@@ -468,6 +524,7 @@ time.sleep(0.5)
 ````py
 print(toio.battery())
 ````
+<br>
 
 ## bleVersion メソッド
 
@@ -489,4 +546,61 @@ print(toio.battery())
 print(toio.bleVersion())
 ````
 
+<br>
+
 -----
+# Notifyの活用
+
+  * Notifyとは？
+  * Notify用のメソッドの定義方法
+  * Notifyが使えるメソッド
+
+## Notifyとは？
+
+> コアキューブが衝突したときや、コアキューブのボタンを押した時の通知のことを Notify という。コアキューブでは、ほとんどの命令が Notify に対応している。<br>
+> Notifyが発生したときに実行される関数（callback関数的なもの）を定義できるようにした。
+
+````py
+# --- toioDefaultDelegateクラスを継承したクラスを、notify用として定義する
+class MyDelegate(toioDefaultDelegate):
+    def notify_button(self, id, stat):　　# button のnotifyメソッドをオーバーライド
+      if stat == 0x80:
+        self.ctoio.soundId(2)
+
+if __name__ == "__main__":
+  toio = CoreCube()
+  toio.connect("xx:xx:xx:xx:xx:xx")
+
+  # --- 上で定義したクラスを、Delegate用クラスとして設定
+  toio.withDelegate(MyDelegate(bluepy.btle.DefaultDelegate, toio))
+
+  # --- Notifyを要求
+  toio.setNotify(toio.HANDLE_TOIO_BTN, True)
+
+  # --- Notify待ち関数を実行させる。 10秒Notifyがなければ終了
+  while True:
+    if toio.waitForNotifications(10.0):
+      # 10.0秒以内にNotifyが来た時
+      pass
+    else:
+      # 10.0秒以内にNotifyが来なかった時
+      break
+````
+
+> Notifyを受け取るためにやることは３つ。
+
+1. Delegateクラスを定義し、デフォルトのnotifyメソッドを、自分なりのメソッドにオーバーライドする
+   * デフォルトのDelegateクラスとして toioDefaultDelegateクラスを定義したので、これを継承したクラスを作成する
+   * Notifyしたい機能ごとに notiry_xxxxx() というメソッドを用意されているので、自分なりのメソッドにオーバーライドする。上記の例では、button が押されたときNotiry を受け取っている。（どんなメソッドを用意したのかや、渡される引数の詳細については、後述。）
+   * ちなみに、button の stat == 0x80 は「ボタンが押されたとき」に返ってきたという意味
+1. 上記で定義した自分なりのメソッドを、delegate クラスとして設定する。
+   * 「おまじない」だと考える。
+  　<br>toio.withDelegate(MyDelegate(bluepy.btle.DefaultDelegate, toio))
+1. コアキューブに、Notify を返すように要求する
+   * 以下のように、必要なハンドルに対して、Notify を要求する
+    <br>toio.setNotify(toio.HANDLE_TOIO_BTN, True)
+
+> これで、Notifyを受け取るための準備ができた。bluepy では、この後、**waitForNotifications() というメソッドを呼ぶことで、Notify待ち状態のループにする。（←　ココ大事）**　具体的には、上記サンプルを参照<br>
+> プログラムの処理としては、waitForNotifications()を呼び、指定時間だけNotify待ちになり、その間にNotifyが来たらdelegateクラスで指定されたメソッドが実行され、waitForNotifications()は Trueを返す。もし、指定時間にNotifyがなければ、Falseが返る<br>
+> つまり、イベントドリブン的な感じになるということ。
+
