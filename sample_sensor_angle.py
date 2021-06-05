@@ -7,25 +7,13 @@ import sys
 class MyDelegate(toioDefaultDelegate):
     # HANDLE_TOIO_BTN
     def notify_button(self, id, stat):
-      global end_flag
       if stat == 0x80:
-        print("終了 !!")
+        print("Push !!")
         self.corecube.soundId(2)
-        end_flag = True
 
     # HANDLE_TOIO_SEN
-    def notify_motion(self, id, horizon, tap, dbltap, posture, shake):
-      print("Motion: 水平= %d, 衝突=%d, ダブルタップ=%d, 姿勢=%d, シェイク=%d" % (horizon, tap, dbltap, posture, shake))
-      if dbltap == 1:
-        self.corecube.soundId(6)
-    
-    # HANDLE_TOIO_ID
-    def notify_positionID(self, x, y, dir):
-      print("X,Y,dir = (%d,%d),%d" % (x,y,dir))
-
-    def notify_standardID(self, stdid, dir):
-      print("ID = %d, dir = %d" % (stdid,dir))
-
+    def notify_sensor_angle(self, id, mode, roll, pitch, yaw):
+      print("id, mode, (Roll, Pitch, Yaw) = %d, %d, (%d, %d, %d)" % (id, mode, roll, pitch, yaw))
 
 if __name__ == "__main__":
 
@@ -37,21 +25,20 @@ if __name__ == "__main__":
   else:
     toio_addr = sys.argv[1]
   toio.connect(toio_addr)
-
+  
   # --- Notifyを受け取るクラスの設定
   toio.withDelegate(MyDelegate(toio))
 
   # --- Notifyを要求
-  toio.setNotify(toio.HANDLE_TOIO_ID, True)
-  toio.setNotify(toio.HANDLE_TOIO_SEN, True)
   toio.setNotify(toio.HANDLE_TOIO_BTN, True)
+  toio.setNotify(toio.HANDLE_TOIO_SEN, True)
 
-  # --- Notify待ち関数を実行させる。 ボタンをう押すか、10秒Notifyがなければ終了
-  end_flag = False
+  # 姿勢角検出をONにする
+  toio.sensor_angle(1, 5)  # mode = 1,  interval = 100ms
+
+  # --- Notify待ち関数を実行させる。 10秒Notifyがなければ終了
   while True:
-    if toio.waitForNotifications(10.0):
-      if end_flag:
-        break
+    if toio.waitForNotifications(5.0):
       pass
     else:
       break

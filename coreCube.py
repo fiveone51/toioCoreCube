@@ -1,5 +1,5 @@
 import bluepy
-import binascii
+#import binascii
 import time
 import struct
 import codecs
@@ -44,77 +44,96 @@ class CoreCube(bluepy.btle.Peripheral):
   #  ---------------- ID Information
   def id(self):
     data = self.readCharacteristic(self.HANDLE_TOIO_ID)
-    id = struct.unpack('b', data[0:1])[0]
+    id = struct.unpack('B', data[0:1])[0]
     if id == 0x01:
       self.x, self.y, self.dir = struct.unpack('hhh', data[1:7])
     elif id == 0x02:
-      self.stdid = struct.unpack('i', data[1:5])[0]
-      self.dir = struct.unpack('h', data[5:7])[0]
+      self.stdid = struct.unpack('I', data[1:5])[0]
+      self.dir = struct.unpack('H', data[5:7])[0]
     return id
 
   #  ---------------- Sensor Information
   def sensor(self):
     data = self.readCharacteristic(self.HANDLE_TOIO_SEN)
-    id = struct.unpack('b', data[0:1])[0]
+    id = struct.unpack('B', data[0:1])[0]
     if id == 0x01:
-      self.horizon = struct.unpack('b', data[1:2])[0]
-      self.collision = struct.unpack('b', data[2:3])[0]
+      self.horizon = struct.unpack('B', data[1:2])[0]
+      self.collision = struct.unpack('B', data[2:3])[0]
     return id
 
   #  ---------------- Battery Information
   def battery(self):
     data = self.readCharacteristic(self.HANDLE_TOIO_BAT)
-    return struct.unpack('b', data)[0]
+    return struct.unpack('B', data)[0]
 
   #  ---------------- Motor Control
   def motor(self, speeds, duration):
-    data = "01" if duration == 0 else "02"
-    data = data + "01" + ("01" if speeds[0] >= 0 else "02") + ("{:02x}".format(abs(speeds[0])))
-    data = data + "02" + ("01" if speeds[1] >= 0 else "02") + ("{:02x}".format(abs(speeds[1])))
+    bdata = b'\x01' if duration == 0 else b'\x02'
+    bdata = bdata + struct.pack('BBB', 0x01, 0x01 if speeds[0] >= 0 else 0x02, abs(speeds[0]))
+    bdata = bdata + struct.pack('BBB', 0x02, 0x01 if speeds[1] >= 0 else 0x02, abs(speeds[1]))
     if duration != 0:
-      data = data + ("{:02x}".format(duration))
-    self.writeCharacteristic(self.HANDLE_TOIO_MTR, binascii.a2b_hex(data))
+      bdata = bdata + struct.pack('B', duration)
+    self.writeCharacteristic(self.HANDLE_TOIO_MTR, bdata)
+  # data = "01" if duration == 0 else "02"
+  # data = data + "01" + ("01" if speeds[0] >= 0 else "02") + ("{:02x}".format(abs(speeds[0])))
+  # data = data + "02" + ("01" if speeds[1] >= 0 else "02") + ("{:02x}".format(abs(speeds[1])))
+  # if duration != 0:
+  #   data = data + ("{:02x}".format(duration))
+  # self.writeCharacteristic(self.HANDLE_TOIO_MTR, binascii.a2b_hex(data))
+
+  #  ---------------- Motor Control (Target)
+  def motor_target(self, x, y, dir=0xa000, timeout=0, mtype=0, speed_max=0x50, speed_type=0x00):
+    bdata = struct.pack('BBBBBBBHHH', 0x03, 0x00, timeout, mtype, speed_max, speed_type, 0x00, x, y, dir)
+    self.writeCharacteristic(self.HANDLE_TOIO_MTR, bdata)
 
   #  ---------------- Light Control
   def lightOn(self, color, duration):
-    data = "03{:02x}0101{:02x}{:02x}{:02x}".format(duration, color[0], color[1], color[2])
-    self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
+    bdata = struct.pack('BBBBBBB', 0x03, duration, 0x01, 0x01, color[0], color[1], color[2])
+    self.writeCharacteristic(self.HANDLE_TOIO_LED, bdata)
 
   def lightSequence(self, times, operations):    # operations = ( (duration,(r,g,b)), (d,(r,g,b)), ... )
-    data = "04{:02x}".format(times)
-    data = data + "{:02x}".format(len(operations))
+    bdata = struct.pack('BBB', 0x04, times, len(operations))
     for ope in operations:
-      data = data + "{:02x}0101{:02x}{:02x}{:02x}".format(ope[0], ope[1][0], ope[1][1], ope[1][2])
-    self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
+      bdata = bdata + struct.pack('BBBBBB', ope[0], 0x01, 0x01, ope[1][0], ope[1][1], ope[1][2])
+    self.writeCharacteristic(self.HANDLE_TOIO_LED, bdata)
+  # data = "04{:02x}".format(times)
+  # data = data + "{:02x}".format(len(operations))
+  # for ope in operations:
+  #   data = data + "{:02x}0101{:02x}{:02x}{:02x}".format(ope[0], ope[1][0], ope[1][1], ope[1][2])
+  # self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
 
   def lightOff(self):
-    data = "01"
-    self.writeCharacteristic(self.HANDLE_TOIO_LED, binascii.a2b_hex(data))
+    bdata = struct.pack('B', 0x01)
+    self.writeCharacteristic(self.HANDLE_TOIO_LED, bdata)
 
   #  ---------------- Sound Control
   def soundId(self, id):
-    data = "02{:02x}FF".format(id)
-    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
+    bdata = struct.pack('BBB', 0x02, id, 0xff)
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, bdata)
 
   def soundSequence(self, times, operations):     # operations = ( (duration,note), (d,n), ... )
-    data = "03{:02x}".format(times)
-    data = data + "{:02x}".format(len(operations))
+    bdata = struct.pack('BBB', 0x03, times, len(operations))
     for ope in operations:
-      data = data + "{:02x}{:02x}FF".format(ope[0], ope[1])
-    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
+      bdata = bdata + struct.pack('BBB', ope[0], ope[1], 0x0FF)
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, bdata)
+  # data = "03{:02x}".format(times)
+  # data = data + "{:02x}".format(len(operations))
+  # for ope in operations:
+  #   data = data + "{:02x}{:02x}FF".format(ope[0], ope[1])
+  # self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
 
   def soundMono(self, duration, note):
-    data = "030101{:02x}{:02x}FF".format(duration, note)
-    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
+    bdata = struct.pack('BBBBBB', 0x03, 0x01,0x01, duration, note, 0xff)
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, bdata)
 
   def soundStop(self):
-    data = "01"
-    self.writeCharacteristic(self.HANDLE_TOIO_SND, binascii.a2b_hex(data))
+    bdata = struct.pack('B', 0x01)
+    self.writeCharacteristic(self.HANDLE_TOIO_SND, bdata)
 
   #  ---------------- Configuration  ( BLE Version )
   def bleVersion(self):
-    data = "0100"
-    self.writeCharacteristic(self.HANDLE_TOIO_CFG, binascii.a2b_hex(data))
+    bdata = struct.pack('BB', 0x01, 0x00)
+    self.writeCharacteristic(self.HANDLE_TOIO_CFG, bdata)
     time.sleep(0.1)
     data = self.readCharacteristic(self.HANDLE_TOIO_CFG)
     try:
@@ -125,9 +144,15 @@ class CoreCube(bluepy.btle.Peripheral):
 
   #  ---------------- Magnetic Sensor Information
   def magnetic(self, mode, interval):
-    # Notify にて、intervalで指定した間隔で返ってくる
-    data = "1b00{:02x}{:02x}01".format(mode, interval)
-    self.writeCharacteristic(self.HANDLE_TOIO_CFG, binascii.a2b_hex(data))
+    # Notify にて、intervalで指定した間隔(0で無効)で返ってくる
+    bdata = struct.pack('BBBBB', 0x1b, 0x00, mode, interval, 0x01)
+    self.writeCharacteristic(self.HANDLE_TOIO_CFG, bdata)
+
+  #  ---------------- Magnetic Sensor Information
+  def sensor_angle(self, mode, interval):
+    # Notify にて、intervalで指定した間隔(0で無効)で返ってくる
+    bdata = struct.pack('BBBBB', 0x1d, 0x00, mode, interval, 0x01)
+    self.writeCharacteristic(self.HANDLE_TOIO_CFG, bdata)
 
   # ----------------- Utility
 
@@ -238,45 +263,66 @@ class CoreCube(bluepy.btle.Peripheral):
 
 
 class toioDefaultDelegate(bluepy.btle.DefaultDelegate):
-    def __init__(self, params, ptoio):             # コンストラクタで対応するtoioを指定する
+    def __init__(self, pcorecube):             # コンストラクタで対応するtoioを指定する
         bluepy.btle.DefaultDelegate.__init__(self)
-        self.ctoio = ptoio
+        self.corecube = pcorecube
 
     # notify callback: cHandle で何のNotifyかを見分けて処理分岐
     def handleNotification(self, cHandle, data):
+        # ------------- モーター
+        if cHandle == self.corecube.HANDLE_TOIO_MTR:
+          id = struct.unpack('b', data[0:1])[0]
+          # --- 目標指定付きモーター制御の応答
+          if id == 0x83:
+            id, dummy, response = struct.unpack('bbb', data[0:3])
+            self.notify_motor_response(response)
+
         # ------------- ボタン
-        if cHandle == self.ctoio.HANDLE_TOIO_BTN:
+        if cHandle == self.corecube.HANDLE_TOIO_BTN:
           id, stat = struct.unpack('BB', data[0:2])
           self.notify_button(id, stat)
 
         # ------------- モーションセンサー
-        if cHandle == self.ctoio.HANDLE_TOIO_SEN:
+        if cHandle == self.corecube.HANDLE_TOIO_SEN:
           id = struct.unpack('b', data[0:1])[0]
+          # --- モーション検出
           if id == 0x01:
-            id, horizon, tap, dbltap = struct.unpack('BBBB', data[0:4])
-            self.notify_motion(id, horizon, tap, dbltap)
+            id, horizon, tap, dbltap, posture, shake = struct.unpack('BBBBBB', data[0:6])
+            self.notify_motion(id, horizon, tap, dbltap, posture, shake)
+          # --- 磁気センサー
           if id == 0x02:
             id, status, power, x, y, z = struct.unpack('bbbBBB', data[0:6])
             self.notify_magnetic(id, status, power, x, y, z)
+          # --- 姿勢角検出
+          if id == 0x03:
+            mode = struct.unpack('b', data[1:2])[0]
+            if mode == 0x01:   # --- オイラー角のみ対応
+              roll, pitch, yaw = struct.unpack('hhh', data[2:8])
+              self.notify_sensor_angle(id, mode, roll, pitch, yaw)
 
         # ------------- IDセンサー
-        if cHandle == self.ctoio.HANDLE_TOIO_ID:
+        if cHandle == self.corecube.HANDLE_TOIO_ID:
           id = struct.unpack('b', data[0:1])[0]
           if id == 0x01:
             x, y, dir = struct.unpack('hhh', data[1:7])
-            self.notify_XY(x, y, dir)
+            self.notify_positionID(x, y, dir)
           elif id == 0x02:
             stdid = struct.unpack('i', data[1:5])[0]
             dir = struct.unpack('h', data[5:7])[0]
-            self.notify_ID(stdid, dir)
+            self.notify_standardID(stdid, dir)
 
-    def notify_button(self, id, stat):
+    # ---- 必要なメソッドをオーバーライド
+    def notify_positionID(self, x, y, dir):
       pass
-    def notify_motion(self, id, horizon, tap, dbltap):
+    def notify_standardID(self, stdid, dir):
       pass
-    def notify_XY(self, x, y, dir):
+    def notify_motion(self, id, horizon, tap, dbltap, posture, shake):
       pass
-    def notify_ID(self, stdid, dir):
+    def notify_sensor_angle(self, id, mode, roll, pitch, yaw):
       pass
     def notify_magnetic(self, id, status, power, x, y, z):
+      pass
+    def notify_button(self, id, stat):
+      pass
+    def notify_motor_response(self, response):
       pass

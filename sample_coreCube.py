@@ -11,7 +11,7 @@ if __name__ == "__main__":
     print("Connect to " + toio_addr)
   else:
     toio_addr = sys.argv[1]
-  toio.connect(toio_addr, bluepy.btle.ADDR_TYPE_RANDOM)
+  toio.connect(toio_addr)
   time.sleep(1)
 
   # Light は、(30ms, Red), (30ms, Green) を3回繰り返す

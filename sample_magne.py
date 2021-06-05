@@ -1,20 +1,19 @@
 from coreCube import CoreCube
 from coreCube import toioDefaultDelegate
-import time
 import bluepy
 import sys
-import struct
 
+# --- Notifyされたときに実行される処理記述
 class MyDelegate(toioDefaultDelegate):
     # HANDLE_TOIO_BTN
     def notify_button(self, id, stat):
       if stat == 0x80:
-        print("NEW ID = %d" % id)
-        self.ctoio.soundId(2)
+        print("Push !!")
+        self.corecube.soundId(2)
 
     # HANDLE_TOIO_SEN
     def notify_magnetic(self, id, status, power, x, y, z):
-      print("id, status, power, (X,Y,Z) = %d, %d,%d, (%d, %d, %d)" % (id, status,power,x,y,z))
+      print("id, status, power, (X, Y, Z) = %d, %d, %d, (%d, %d, %d)" % (id, status, power, x, y, z))
 
 if __name__ == "__main__":
 
@@ -28,7 +27,7 @@ if __name__ == "__main__":
   toio.connect(toio_addr)
   
   # --- Notifyを受け取るクラスの設定
-  toio.withDelegate(MyDelegate(bluepy.btle.DefaultDelegate, toio))
+  toio.withDelegate(MyDelegate(toio))
 
   # --- Notifyを要求
   toio.setNotify(toio.HANDLE_TOIO_BTN, True)
