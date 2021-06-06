@@ -151,8 +151,11 @@ if __name__ == "__main__":
   # Notifyが来たら（ボタンが押されたら）、MyDelegate.notify_button()が実行され、終了する。
   while True:
     if toio.waitForNotifications(10.0):
-      # Notify処理が実行された時
+      # Notify処理が実行された後の処理
       break
+    elif
+      # Notify処理がなく、10.0秒経った後の処理
+      pass
 
   # --- 切断
   toio.disconnect()
@@ -355,7 +358,7 @@ time.sleep(1)
 |書式|**motorTarget(x, y, dir, timeout, mtype, speed_max, speed_type))**|
 |引数|**X**: 目的のX座標|
 ||**Y**: 目的のY座標|
-||dir: 目的地でのコアキューブの角度。`省略可能`。省略時は角度の修正は行わない。 [詳細](https://toio.github.io/toio-spec/docs/ble_motor#%E7%9B%AE%E6%A8%99%E5%9C%B0%E7%82%B9%E3%81%A7%E3%81%AE%E3%82%AD%E3%83%A5%E3%83%BC%E3%83%96%E3%81%AE%E8%A7%92%E5%BA%A6-%CE%B)|
+||dir: 目的地でのコアキューブの角度。`省略可能`。省略時は角度の修正は行わない。 [詳細](https://toio.github.io/toio-spec/docs/ble_motor#%E7%9B%AE%E6%A8%99%E5%9C%B0%E7%82%B9%E3%81%A7%E3%81%AE%E3%82%AD%E3%83%A5%E3%83%BC%E3%83%96%E3%81%AE%E8%A7%92%E5%BA%A6-%CE%B8)|
 ||timeout: タイムアウト時間(秒)。`省略可能`。省略時は10秒|
 ||mtype: 移動タイプ。`省略可能`。省略時は0（回転しながら移動）。 [詳細](https://toio.github.io/toio-spec/docs/ble_motor#%E7%A7%BB%E5%8B%95%E3%82%BF%E3%82%A4%E3%83%97)|
 ||speed_max: モーターの最大速度指示値。`省略可能`。省略時は 0x50|
@@ -542,7 +545,7 @@ time.sleep(0.5)
 |:---|:--|
 |書式|**soundSequence(times, operations)**|
 |引数|**times**:<p>0: 無限に繰り返す<P>1～255: 繰り返し回数 |
-||**operations**: サウンドの再生パターンを配列で指定<p> [ [duration, note], [duration, note], ... ] のように指定する。|
+||**operations**: サウンドの再生パターンを配列で指定<p> [ [duration, note], [duration, note], ... ] のように指定する。durationは0.01ms単位|
 |戻り値|なし|
 
 #### 実行例
@@ -581,7 +584,7 @@ toio.soundStop()
 #### 実行例
 
 ````py
-toio.soundMono(0, 60)   # ド
+toio.soundMono(0, 60)   # ドを無限に鳴らす
 time.sleep(2.0)
 toio.soundStop()
 ````
@@ -668,8 +671,11 @@ if __name__ == "__main__":
   # Notifyが来たら（ボタンが押されたら）、MyDelegate.notify_button()が実行され、終了する。
   while True:
     if toio.waitForNotifications(10.0):
-      # Notify処理が実行された時
+      # Notify処理が実行された後の処理
       break
+    elif
+      # Notify処理がなく、10.0秒経った後の処理
+      pass
 
   # --- 切断
   toio.disconnect()
@@ -766,7 +772,7 @@ if __name__ == "__main__":
 
 <br>
 
-> `notify_button(self, id, stat):`
+> `notify_button(self, id, status):`
 > |項目|型|詳細|
 > |:---|:--|:--|
 > |**id**|int| 0x02 固定|
@@ -829,7 +835,7 @@ if __name__ == "__main__":
 > |項目|型|詳細|
 > |:---|:--|:--|
 > |**mode**|int| 通知内容の種類（0x01 オイラー角のみ）|
-> |**interval**|int|Notifyを返す間隔(10ms単位)|
+> |**interval**|int|Notifyを返す間隔(10ms単位) 0x00 を指定すると無効化する|
 >
 > 本来、オイラー角の他、クォータニオンでの通知が可能だが、複雑になるので、オイラー角のみ有効にしている
 
@@ -861,10 +867,10 @@ if __name__ == "__main__":
   # Notifyが来たら（ボタンが押されたら）、MyDelegate.notify_button()が実行され、終了する。
   while True:
     if toio.waitForNotifications(10.0):
-      # Notify処理が実行された時
+      # Notify処理が実行された後の処理
       break
     elif
-      # Notify処理がなく、10.0秒経った時
+      # Notify処理がなく、10.0秒経った後の処理
       pass
 
   # --- 切断
