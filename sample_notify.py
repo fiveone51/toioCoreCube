@@ -1,6 +1,5 @@
 from coreCube import CoreCube
 from coreCube import toioDefaultDelegate
-import bluepy
 import sys
 
 # --- Notifyされたときに実行される処理記述
