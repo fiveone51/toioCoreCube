@@ -44,28 +44,7 @@ class CoreCube(bluepy.btle.Peripheral):
       elif chara.uuid.binVal.hex() == "10b201ff5b3b45719508cf3efcd7bbae":
         self.HANDLE_TOIO_CFG = chara.getHandle()
 
-  # いちばん近いcoreCube のアドレスを返す。ただし、root で実行する必要がある。
-  # （既にconnect中のものがあるとdisconnectされるので注意）
-  @classmethod
-  def cubeFinder(self):
-    if os.environ.get('USER') == 'root':
-      scaner = bluepy.btle.Scanner(0)
-      devices = scaner.scan(3)
-    
-      finds = []
-      for device in devices:
-        for (adType, desc, value) in device.getScanData():
-          if "toio Core Cube" in value:
-            finds.append((device.rssi, device.addr))
-      if len(finds):
-        finds.sort(key = lambda rssi:rssi[0], reverse=True)
-        return finds[0][1]
-      else:
-        raise FileNotFoundError('toio core cube is not found.')
-    else:
-      raise PermissionError('You need to execute this command as root')
-
-  # coreCube を探して、アドレスを返す。ただし、root で実行する必要がある。
+  # coreCube を探して、見つかった分のアドレスをリストで返す。ただし、root で実行する必要がある。
   # 戻り値は、近い順にソートされている
   # （既にconnect中のものがあるとdisconnectされるので注意）
   @classmethod
@@ -85,6 +64,27 @@ class CoreCube(bluepy.btle.Peripheral):
         for i in finds:
           ret.append(i[1])
       return ret
+    else:
+      raise PermissionError('You need to execute this command as root')
+
+  # いちばん近いcoreCube のアドレスを返す。ただし、root で実行する必要がある。
+  # （既にconnect中のものがあるとdisconnectされるので注意）
+  @classmethod
+  def cubeFinder(self):
+    if os.environ.get('USER') == 'root':
+      scaner = bluepy.btle.Scanner(0)
+      devices = scaner.scan(3)
+    
+      finds = []
+      for device in devices:
+        for (adType, desc, value) in device.getScanData():
+          if "toio Core Cube" in value:
+            finds.append((device.rssi, device.addr))
+      if len(finds):
+        finds.sort(key = lambda rssi:rssi[0], reverse=True)
+        return finds[0][1]
+      else:
+        raise FileNotFoundError('toio core cube is not found.')
     else:
       raise PermissionError('You need to execute this command as root')
 
@@ -201,65 +201,8 @@ class CoreCube(bluepy.btle.Peripheral):
     else:
       self.writeCharacteristic(handle + 1, b'\x00\x00', True)
 
-  # ========================================================================
-  #           Utility
-  # ========================================================================
 
-  # 指定角度を向く
-  #    細かいパラメータ:
-  def turnTo(self, tdir):
-    for i in range(20):
-      self.id()
-      diff_dir = tdir - self.dir
-      if (abs(diff_dir) <= 15 ):
-        self.motor( (0, 0), 0)
-        break
-      else:
-        if diff_dir > 180: diff_dir -= 360
-        if diff_dir < -180: diff_dir += 360
-        sp = max(int(diff_dir/4), 10) if diff_dir > 0 else min(int(diff_dir/4), -10)
-        self.motor( (sp, -sp), 10)
-        time.sleep(0.02)
 
-  # 指定位置に向かう
-  #    
-  def moveTo(self, tx, ty, speed):
-    STOP = 10
-    SLOW = speed
-    while True:
-      if self.id() != 1:
-        break
-
-      # --- 指定位置に近づいた？
-      dist =  math.sqrt((tx - self.x)**2 + (ty - self.y)**2)
-      ds = 1.0  # --- 減速係数
-      if dist < STOP:          # --- 指定位置からSTOP範囲に入ったら、終了
-        break
-      if dist < SLOW:          # --- 指定位置からSLOW範囲に入ったら、減速
-        ds = max(dist / SLOW, 0.3)
-
-      # --- 現在位置から、指定位置までの角度を計算
-      tdir = int(math.acos( (tx - self.x) / dist ) * 180.0 / math.pi)
-      if ty - self.y < 0: tdir *= -1
-
-      # --- 角度補正値計算
-      diff_dir = tdir - self.dir
-      if diff_dir > 180: diff_dir -= 360
-      if diff_dir < -180: diff_dir += 360
-      dr = abs(int(diff_dir / 2)) + 1 if diff_dir > 0 else 0
-      dl = abs(int(diff_dir / 2)) + 1 if diff_dir < 0 else 0
-
-      # --- move
-      sl = max(int((speed - dl) * ds ), 10)
-      sr = max(int((speed - dr) * ds ), 10)
-      if sl+sr == 20:          # --- 最低速度だと差が出ないので・・・
-        sl = sl + 1 if dr != 0 else sl
-        sr = sr + 1 if dl != 0 else sr
-      self.motor( (sl, sr), 0 )
-      time.sleep(0.03)
-
-    self.motor( (0, 0), 0 )
-  
 
 class toioDefaultDelegate(bluepy.btle.DefaultDelegate):
     def __init__(self, pcorecube):             # コンストラクタで対応するtoioを指定する
@@ -321,7 +264,7 @@ class toioDefaultDelegate(bluepy.btle.DefaultDelegate):
       pass
     def notify_magnetic(self, id, status, power, x, y, z):
       pass
-    def notify_button(self, id, stat):
+    def notify_button(self, id, status):
       pass
     def notify_motor_response(self, response):
       pass

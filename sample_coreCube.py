@@ -29,9 +29,9 @@ class MyDelegate(toioDefaultDelegate):
       print("Magne: id, status, power, (X, Y, Z) = %d, %d, %d, (%d, %d, %d)" % (id, status, power, x, y, z))
 
     # HANDLE_TOIO_BTN
-    def notify_button(self, id, stat):
+    def notify_button(self, id, status):
       global loop_flag
-      if stat == 0x80:
+      if status == 0x80:
         print("終了 !!")
         self.corecube.soundId(2)
         loop_flag = False
@@ -53,7 +53,12 @@ if __name__ == "__main__":
   toio = CoreCube()
   if len(sys.argv) == 1:
     print(" ... Searching CoreCube by cubeFinder()")
-    toio_addr = toio.cubeFinder()
+    toio_addrs = toio.cubeSearch()
+    if len(toio_addrs) >= 1:
+      toio_addr = toio_addrs[0]
+    else:
+      print("toio corecube not found!")
+      sys.exit(1)
   else:
     toio_addr = sys.argv[1]
   print("Connect to " + toio_addr)

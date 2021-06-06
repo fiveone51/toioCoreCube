@@ -5,9 +5,9 @@ import sys
 # --- Notifyされたときに実行される処理記述
 class MyDelegate(toioDefaultDelegate):
     # HANDLE_TOIO_BTN
-    def notify_button(self, id, stat):
+    def notify_button(self, id, status):
       global end_flag
-      if stat == 0x80:
+      if status == 0x80:
         print("終了 !!")
         self.corecube.soundId(2)
         end_flag = True

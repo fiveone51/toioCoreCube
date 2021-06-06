@@ -6,8 +6,8 @@ import sys
 # --- Notifyされたときに実行される処理記述
 class MyDelegate(toioDefaultDelegate):
     # HANDLE_TOIO_BTN
-    def notify_button(self, id, stat):
-      if stat == 0x80:
+    def notify_button(self, id, status):
+      if status == 0x80:
         print("Push !!")
         self.corecube.soundId(2)
 
